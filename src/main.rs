@@ -127,3 +127,62 @@ async fn handle_udp(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use hbb_common::{protobuf::Message as _, rendezvous_proto::*};
+
+    fn decode(bytes: &[u8]) -> RendezvousMessage {
+        RendezvousMessage::parse_from_bytes(bytes).expect("rendezvous message should decode")
+    }
+
+    #[test]
+    fn decodes_register_peer_payload() {
+        // What a client sends for RegisterPeer { id: "ab", serial: 1 },
+        // wrapped as RendezvousMessage.register_peer (field 6).
+        let bytes = [0x32, 0x06, 0x0a, 0x02, b'a', b'b', 0x10, 0x01];
+        match decode(&bytes).union {
+            Some(RendezvousMessage_oneof_union::register_peer(peer)) => {
+                assert_eq!(peer.id, "ab");
+                assert_eq!(peer.serial, 1);
+            }
+            other => panic!("unexpected message: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn decodes_punch_hole_request_payload() {
+        // RendezvousMessage.punch_hole_request (field 8) with id "peer".
+        let bytes = [0x42, 0x06, 0x0a, 0x04, b'p', b'e', b'e', b'r'];
+        match decode(&bytes).union {
+            Some(RendezvousMessage_oneof_union::punch_hole_request(request)) => {
+                assert_eq!(request.id, "peer");
+            }
+            other => panic!("unexpected message: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn register_peer_response_round_trips() {
+        let mut msg = RendezvousMessage::new();
+        msg.set_register_peer_response(RegisterPeerResponse::new());
+        let parsed = decode(&msg.write_to_bytes().unwrap());
+        assert!(parsed.has_register_peer_response());
+    }
+
+    #[test]
+    fn register_pk_response_ok_round_trips() {
+        let mut msg = RendezvousMessage::new();
+        msg.set_register_pk_response(RegisterPkResponse {
+            result: RegisterPkResponse_Result::OK,
+            ..Default::default()
+        });
+        let parsed = decode(&msg.write_to_bytes().unwrap());
+        match parsed.union {
+            Some(RendezvousMessage_oneof_union::register_pk_response(response)) => {
+                assert_eq!(response.result, RegisterPkResponse_Result::OK);
+            }
+            other => panic!("unexpected message: {:?}", other),
+        }
+    }
+}
