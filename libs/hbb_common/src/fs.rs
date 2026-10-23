@@ -132,13 +132,13 @@ fn read_dir_recursive(
         // to-do: file mode, for unix
         let fd = read_dir(&path, include_hidden)?;
         for entry in fd.entries.iter() {
-            match entry.entry_type.enum_value() {
-                Ok(FileType::File) => {
+            match entry.entry_type {
+                FileType::File => {
                     let mut entry = entry.clone();
                     entry.name = get_string(&prefix.join(entry.name));
                     files.push(entry);
                 }
-                Ok(FileType::Dir) => {
+                FileType::Dir => {
                     if let Ok(mut tmp) = read_dir_recursive(
                         &path.join(&entry.name),
                         &prefix.join(&entry.name),
@@ -527,11 +527,11 @@ pub async fn handle_read_jobs(
 pub fn remove_all_empty_dir(path: &PathBuf) -> ResultType<()> {
     let fd = read_dir(path, true)?;
     for entry in fd.entries.iter() {
-        match entry.entry_type.enum_value() {
-            Ok(FileType::Dir) => {
+        match entry.entry_type {
+            FileType::Dir => {
                 remove_all_empty_dir(&path.join(&entry.name)).ok();
             }
-            Ok(FileType::DirLink) | Ok(FileType::FileLink) => {
+            FileType::DirLink | FileType::FileLink => {
                 std::fs::remove_file(&path.join(&entry.name)).ok();
             }
             _ => {}

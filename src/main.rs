@@ -25,7 +25,7 @@ async fn main() {
                 if let Some(Ok(bytes)) = stream.next_timeout(3000).await {
                     if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(&bytes) {
                         match msg_in.union {
-                            Some(rendezvous_message::Union::punch_hole_request(ph)) => {
+                            Some(RendezvousMessage_oneof_union::punch_hole_request(ph)) => {
                                 println!("punch_hole_request {:?}", addr);
                                 if let Some(addr) = id_map.get(&ph.id) {
                                     let mut msg_out = RendezvousMessage::new();
@@ -37,7 +37,7 @@ async fn main() {
                                     saved_stream = Some(stream);
                                 }
                             }
-                            Some(rendezvous_message::Union::relay_response(_)) => {
+                            Some(RendezvousMessage_oneof_union::relay_response(_)) => {
                                 println!("relay_response {:?}", addr);
                                 let mut msg_out = RendezvousMessage::new();
                                 msg_out.set_relay_response(RelayResponse {
@@ -107,18 +107,18 @@ async fn handle_udp(
 ) {
     if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(&bytes) {
         match msg_in.union {
-            Some(rendezvous_message::Union::register_peer(rp)) => {
+            Some(RendezvousMessage_oneof_union::register_peer(rp)) => {
                 println!("register_peer {:?}", addr);
                 id_map.insert(rp.id, addr);
                 let mut msg_out = RendezvousMessage::new();
                 msg_out.set_register_peer_response(RegisterPeerResponse::new());
                 socket.send(&msg_out, addr).await.ok();
             }
-            Some(rendezvous_message::Union::register_pk(_)) => {
+            Some(RendezvousMessage_oneof_union::register_pk(_)) => {
                 println!("register_pk {:?}", addr);
                 let mut msg_out = RendezvousMessage::new();
                 msg_out.set_register_pk_response(RegisterPkResponse {
-                    result: register_pk_response::Result::OK.into(),
+                    result: RegisterPkResponse_Result::OK,
                     ..Default::default()
                 });
                 socket.send(&msg_out, addr).await.ok();
